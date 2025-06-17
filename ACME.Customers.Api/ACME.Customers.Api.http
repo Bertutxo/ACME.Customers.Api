@@ -1,0 +1,47 @@
+@host = https://localhost:5001
+
+### Get all clients
+GET {{host}}/api/Clients
+Accept: application/json
+
+###
+
+### Get client by ID
+# Reemplaza clientId por un GUID válido
+GET {{host}}/api/Clients/{{clientId}}
+Accept: application/json
+
+###
+
+### Create a new client
+POST {{host}}/api/Clients
+Content-Type: application/json
+
+{
+  "name": "ACME Corp",
+  "contactEmail": "contact@acme.com",
+  "visitDate": "2025-06-16T10:00:00Z",
+  "salesRepId": "11111111-2222-3333-4444-555555555555",
+  "notes": "Primera reunión en oficinas centrales"
+}
+
+###
+
+### Update an existing client
+# Reemplaza clientId por un GUID válido
+PUT {{host}}/api/Clients/{{clientId}}
+Content-Type: application/json
+
+{
+  "name": "ACME Corp International",
+  "contactEmail": "ventas@acme-int.com",
+  "visitDate": "2025-06-20T14:30:00Z",
+  "salesRepId": "11111111-2222-3333-4444-555555555555",
+  "notes": "Seguimiento tras la presentación del catálogo"
+}
+
+###
+
+### Delete a client
+# Reemplaza clientId por un GUID válido
+DELETE {{host}}/api/Clients/{{clientId}}
