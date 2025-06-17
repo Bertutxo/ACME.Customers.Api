@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ACME.Customers.Application.DTOs
+﻿namespace ACME.Customers.Application.DTOs
 {
     /// <summary>
     /// DTO para la creación de un nuevo Comercial (Sales Rep).

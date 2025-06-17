@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ACME.Customers.Application.DTOs;
+﻿using ACME.Customers.Application.DTOs;
 
 namespace ACME.Customers.Application.Interfaces
 {

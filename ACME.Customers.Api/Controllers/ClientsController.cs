@@ -4,18 +4,35 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ACME.Customers.Api.Controllers
 {
+    /// <summary>
+    /// Controlador API para gestionar operaciones CRUD de clientes.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class ClientsController : ControllerBase
     {
         private readonly IClientService _clientService;
 
+        /// <summary>
+        /// Crea una nueva instancia de <see cref="ClientsController"/>.
+        /// </summary>
+        /// <param name="clientService">
+        /// Servicio de aplicación para gestión de clientes.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Se lanza si <paramref name="clientService"/> es <c>null</c>.
+        /// </exception>
         public ClientsController(IClientService clientService)
         {
             _clientService = clientService ?? throw new ArgumentNullException(nameof(clientService));
         }
 
-        // GET: api/Clients
+        /// <summary>
+        /// Obtiene la lista de todos los clientes.
+        /// </summary>
+        /// <returns>
+        /// <see cref="ActionResult{IEnumerable{ClientDto}}"/> con la colección de clientes.
+        /// </returns>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ClientDto>>> GetAll()
         {
@@ -23,7 +40,13 @@ namespace ACME.Customers.Api.Controllers
             return Ok(clients);
         }
 
-        // GET: api/Clients/{id}
+        /// <summary>
+        /// Obtiene un cliente por su identificador.
+        /// </summary>
+        /// <param name="id">GUID que identifica al cliente.</param>
+        /// <returns>
+        /// <see cref="ActionResult{ClientDto}"/> con el cliente, o 404 si no se encuentra.
+        /// </returns>
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ClientDto>> GetById(Guid id)
         {
@@ -34,7 +57,14 @@ namespace ACME.Customers.Api.Controllers
             return Ok(client);
         }
 
-        // POST: api/Clients
+        /// <summary>
+        /// Crea un nuevo cliente.
+        /// </summary>
+        /// <param name="dto">DTO con los datos del cliente a crear.</param>
+        /// <returns>
+        /// <see cref="IActionResult"/> con status 201 y ruta al recurso creado,
+        /// o 400 si falla la validación o el <c>salesRepId</c> no existe.
+        /// </returns>
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ClientCreateDto dto)
         {
@@ -49,7 +79,15 @@ namespace ACME.Customers.Api.Controllers
             }
         }
 
-        // PUT: api/Clients/{id}
+        /// <summary>
+        /// Actualiza un cliente existente.
+        /// </summary>
+        /// <param name="id">GUID que identifica al cliente.</param>
+        /// <param name="dto">DTO con los datos actualizados.</param>
+        /// <returns>
+        /// <see cref="IActionResult"/> con status 204 si se actualiza,
+        /// 404 si no existe, o 400 si falla validación.
+        /// </returns>
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] ClientUpdateDto dto)
         {
@@ -67,7 +105,13 @@ namespace ACME.Customers.Api.Controllers
             }
         }
 
-        // DELETE: api/Clients/{id}
+        /// <summary>
+        /// Elimina un cliente por su identificador.
+        /// </summary>
+        /// <param name="id">GUID que identifica al cliente.</param>
+        /// <returns>
+        /// <see cref="IActionResult"/> con status 204 si se elimina, o 404 si no existe.
+        /// </returns>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ACME.Customers.Application.DTOs
+﻿namespace ACME.Customers.Application.DTOs
 {
     /// <summary>
     /// Data Transfer Object para exponer la información de un Comercial (Sales Rep).

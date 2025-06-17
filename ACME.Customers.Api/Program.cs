@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ACME.Customers.Application.DependencyInjection;
 using ACME.Customers.Infrastructure;
 using ACME.Customers.Infrastructure.DependencyInjection;
@@ -6,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Mostrar en consola la ConnectionString leída
-Console.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection")
+Debug.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection")
     is string cs ? $"[DBG] ConnStr: {cs}" : "[ERR] No hay DefaultConnection");
 
 // 1. Configurar servicios
