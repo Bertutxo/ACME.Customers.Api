@@ -4,8 +4,6 @@ API REST para gestionar Clientes y Comerciales de ACME.
 
 ✔️ Propósito
 
-Solución de ejemplo para el proceso de selección como Especialista .NET en ACME:
-
 Arquitectura en capas (Core, Infrastructure, Application, Api)
 
 Patrones Repository + Unit of Work
