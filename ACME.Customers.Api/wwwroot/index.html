@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>ACME Customers UI</title>
 
-    <!-- Parche para silenciar warning Tailwind CDN -->
+    <!-- Parche para silenciar warning Tailwind CDN en desarrollo -->
     <script>
         (function () {
             const origWarn = console.warn;
@@ -106,9 +106,10 @@
                 this.errorMsg = '';
                 try {
                     const p = JSON.parse(evt.detail.xhr.responseText);
-                    this.errorMsg = p.message || 'Error inesperado';
+                    // Mostrar mensaje, o genérico si no viene
+                    this.errorMsg = p.message || 'Error inesperado.';
                 } catch {
-                    this.errorMsg = 'Error del servidor';
+                    this.errorMsg = 'Error del servidor.';
                 }
             },
             // Toast temporal
@@ -149,27 +150,38 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- HEADER -->
-    <header class="bg-white shadow p-4 mb-6 relative">
+    <header class="bg-white shadow p-4 mb-0">
         <h1 class="text-2xl font-bold">ACME Customers</h1>
         <p class="text-gray-600">UI con HTMX + Tailwind + Alpine.js</p>
-        <!-- Toast -->
-        <template x-if="$store.app.toastMsg">
-            <div class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow cursor-pointer"
-                 x-text="$store.app.toastMsg"
-                 x-show="$store.app.toastMsg"
-                 x-transition
-                 @click="$store.app.toastMsg = ''">
-            </div>
-        </template>
-        <!-- Error general -->
-        <div x-show="$store.app.errorMsg"
-             x-text="$store.app.errorMsg"
-             class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-700 px-4 py-1 rounded shadow">
-        </div>
     </header>
 
+    <!-- BANNER DE ERROR (aparece justo debajo del header, ancho completo) -->
+    <template x-if="$store.app.errorMsg">
+        <div class="bg-red-600 text-white py-3 px-4 flex justify-between items-center">
+            <!-- Mensaje centrado -->
+            <div class="flex-1 text-center">
+                <span x-text="$store.app.errorMsg"></span>
+            </div>
+            <!-- Botón cerrar -->
+            <button @click="$store.app.errorMsg=''"
+                    class="ml-4 px-2 py-1 bg-red-800 hover:bg-red-700 rounded">
+                Cerrar
+            </button>
+        </div>
+    </template>
+
+    <!-- TOAST DE ÉXITO (aparece superpuesto en esquina) -->
+    <template x-if="$store.app.toastMsg">
+        <div class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow cursor-pointer"
+             x-text="$store.app.toastMsg"
+             x-show="$store.app.toastMsg"
+             x-transition
+             @click="$store.app.toastMsg = ''">
+        </div>
+    </template>
+
     <!-- NAV -->
-    <nav class="px-4 mb-6 flex flex-wrap gap-2">
+    <nav class="px-4 py-3 mb-6 flex flex-wrap gap-2 bg-white shadow-sm">
         <button :class="['btn-blue', $store.app.listType==='clients' ? 'nav-active' : '']"
                 @click="$store.app.showClientsList()">
             Listar Clientes
@@ -195,8 +207,8 @@
     <section class="px-4 mb-6 space-y-4">
 
         <!-- Crear Cliente -->
-        <div x-show="$store.app.form==='client'" x-transition class="bg-white p-4 rounded shadow">
-            <h2 class="text-xl font-semibold mb-2">Crear Cliente</h2>
+        <div x-show="$store.app.form==='client'" x-transition class="bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-semibold mb-4">Crear Cliente</h2>
             <form hx-post="/api/Clients"
                   hx-ext="json-enc"
                   hx-target="#main-content"
@@ -206,8 +218,8 @@
                     $store.app.saving = false;
                     if (event.detail.xhr.status === 201) {
                       $store.app.form = null;
-                      $store.app.showClientsList();
                       $store.app.showToast('Cliente creado correctamente');
+                      $store.app.showClientsList();
                     }
                   "
                   @htmx:responseError="
@@ -220,7 +232,7 @@
                 <div>
                     <label class="block mb-1 font-medium" for="name">Nombre</label>
                     <input id="name" name="name"
-                           placeholder="Nombre"
+                           placeholder="Nombre del cliente"
                            class="w-full p-2 border rounded"
                            required
                            x-model="$store.app.newClient.name" />
@@ -282,7 +294,6 @@
                     <button type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                             x-bind:disabled="$store.app.saving">
-                        <!-- Mostrar “Enviando...” o “Guardar” -->
                         <span x-text="$store.app.saving ? 'Enviando...' : 'Guardar'"></span>
                     </button>
                 </div>
@@ -290,8 +301,8 @@
         </div>
 
         <!-- Crear Comercial -->
-        <div x-show="$store.app.form==='rep'" x-transition class="bg-white p-4 rounded shadow">
-            <h2 class="text-xl font-semibold mb-2">Crear Comercial</h2>
+        <div x-show="$store.app.form==='rep'" x-transition class="bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-semibold mb-4">Crear Comercial</h2>
             <form hx-post="/api/SalesReps"
                   hx-ext="json-enc"
                   hx-target="#main-content"
@@ -301,8 +312,8 @@
                     $store.app.saving = false;
                     if (event.detail.xhr.status === 201) {
                       $store.app.form = null;
-                      $store.app.showRepsList();
                       $store.app.showToast('Comercial creado correctamente');
+                      $store.app.showRepsList();
                     }
                   "
                   @htmx:responseError="
@@ -358,7 +369,7 @@
     </section>
 
     <!-- CONTENEDOR PRINCIPAL -->
-    <main id="main-content" class="flex-1 p-4 bg-white mx-4 rounded shadow">
+    <main id="main-content" class="flex-1 p-4 bg-white mx-4 rounded shadow mb-6">
         <p class="text-gray-500">Pulsa “Listar Clientes” o “Listar Comerciales”.</p>
     </main>
 

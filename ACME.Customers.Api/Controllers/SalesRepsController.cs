@@ -98,7 +98,7 @@ namespace ACME.Customers.Api.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, new { message = "Error interno al actualizar comercial." });
             }
@@ -158,16 +158,16 @@ namespace ACME.Customers.Api.Controllers
                 sb.AppendLine($"  <td class='border p-2'>{emailEsc}</td>");
                 sb.AppendLine($"  <td class='border p-2'>{phoneEsc}</td>");
                 sb.AppendLine("  <td class='border p-2 space-x-2'>");
-                // Editar:
+                // Editar
                 sb.AppendLine($"    <button class='px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600' " +
                               $"hx-get='/api/SalesReps/{r.Id}/edit-html' " +
                               $"hx-target='#main-content' hx-swap='innerHTML'>Editar</button>");
-                // Borrar:
+                // Borrar con confirm y manejo de error
                 sb.AppendLine($"    <button class='px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600' " +
                               $"hx-delete='/api/SalesReps/{r.Id}' " +
                               $"hx-confirm='¿Eliminar comercial \"{nameEsc}\"?' " +
-                              $"@htmx:responseError=\"window.Alpine && Alpine.store('app').handleError($event)\" " +
-                              $"@htmx:afterRequest=\"if (event.detail.xhr.status === 204) {{ window.Alpine && Alpine.store('app').showToast('Comercial eliminado correctamente'); Alpine.store('app').showList('reps'); }}\">Borrar</button>");
+                              $"hx-on='htmx:responseError: window.Alpine && Alpine.store(\"app\").handleError(event)' " +
+                              $"hx-on='htmx:afterRequest: if (event.detail.xhr.status === 204) {{ window.Alpine && Alpine.store(\"app\").showToast(\"Comercial eliminado correctamente\"); Alpine.store(\"app\").showRepsList(); }}'>Borrar</button>");
                 sb.AppendLine("  </td>");
                 sb.AppendLine("</tr>");
             }
@@ -190,19 +190,22 @@ namespace ACME.Customers.Api.Controllers
                           $"hx-put='/api/SalesReps/{rep.Id}' " +
                           "hx-ext='json-enc' " +
                           "hx-target='#main-content' hx-swap='innerHTML' " +
-                          "@htmx:responseError=\"window.Alpine && Alpine.store('app').handleError($event)\" " +
-                          "@htmx:afterRequest=\"if (event.detail.xhr.status === 204) { window.Alpine && Alpine.store('app').showToast('Comercial actualizado correctamente'); Alpine.store('app').showList('reps'); }\" " +
-                          "@submit.prevent " +
-                          "class='space-y-2'>");
-            sb.AppendLine($"    <input name='name' value='{WebUtility.HtmlEncode(rep.Name)}' placeholder='Nombre' class='w-full p-2 border rounded' required />");
-            sb.AppendLine($"    <input name='email' type='email' value='{WebUtility.HtmlEncode(rep.Email)}' placeholder='Email' class='w-full p-2 border rounded' required />");
-            sb.AppendLine($"    <input name='phone' value='{WebUtility.HtmlEncode(rep.Phone)}' placeholder='Teléfono' class='w-full p-2 border rounded' required />");
-            sb.AppendLine("    <div class='space-x-2'>");
+                          "hx-on='htmx:responseError: window.Alpine && Alpine.store(\"app\").handleError(event)' " +
+                          "hx-on='htmx:afterRequest: if (event.detail.xhr.status === 204) { window.Alpine && Alpine.store(\"app\").showToast(\"Comercial actualizado correctamente\"); Alpine.store(\"app\").showRepsList(); }' " +
+                          "class='space-y-4' " +
+                          "onsubmit='return false;'>");
+            sb.AppendLine($"    <div><label class='block mb-1 font-medium'>Nombre</label>" +
+                          $"<input name='name' value='{WebUtility.HtmlEncode(rep.Name)}' placeholder='Nombre' class='w-full p-2 border rounded' required /></div>");
+            sb.AppendLine($"    <div><label class='block mb-1 font-medium'>Email</label>" +
+                          $"<input name='email' type='email' value='{WebUtility.HtmlEncode(rep.Email)}' placeholder='Email' class='w-full p-2 border rounded' required /></div>");
+            sb.AppendLine($"    <div><label class='block mb-1 font-medium'>Teléfono</label>" +
+                          $"<input name='phone' value='{WebUtility.HtmlEncode(rep.Phone)}' placeholder='Teléfono' class='w-full p-2 border rounded' required /></div>");
+            sb.AppendLine("    <div class='flex justify-end space-x-2'>");
+            sb.AppendLine("      <button type='button' class='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500' " +
+                          "hx-on='click: window.Alpine && Alpine.store(\"app\").showRepsList()'>Cancelar</button>");
             sb.AppendLine("      <button type='submit' class='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'>Guardar</button>");
-            sb.AppendLine("      <button type='button' class='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500' @click=\"$store.app.showList('reps')\">Cancelar</button>");
             sb.AppendLine("    </div>");
-            sb.AppendLine("  </form>");
-            sb.AppendLine("</div>");
+            sb.AppendLine("</form></div>");
             return Content(sb.ToString(), "text/html");
         }
 

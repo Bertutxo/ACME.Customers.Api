@@ -87,9 +87,19 @@ namespace ACME.Customers.Application.Services
             if (rep == null)
                 return false;
 
+            // Verificamos si hay clientes asociados:
+            // Asegurarse de que rep.Clients esté poblado (en el repositorio GetByIdAsync incluir Clients).
+            if (rep.Clients != null && rep.Clients.Any())
+            {
+                var nombres = rep.Clients.Select(c => c.Name).ToList();
+                var lista = string.Join(", ", nombres);
+                // Lanzar excepción con mensaje detallado
+                throw new InvalidOperationException(
+                    $"No se puede eliminar el comercial porque tiene {nombres.Count} cliente(s) asociado(s): {lista}.");
+            }
+
             _salesRepRepository.Delete(rep);
             await _unitOfWork.CompleteAsync();
-
             return true;
         }
     }
