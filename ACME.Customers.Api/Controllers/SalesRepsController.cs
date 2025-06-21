@@ -142,7 +142,7 @@ namespace ACME.Customers.Api.Controllers
             {
                 var deleted = await _service.DeleteAsync(id);
                 if (!deleted) return NotFound();
-                return Ok(new { message = "Comercial eliminado correctamente." });
+                return NoContent();
             }
             catch (InvalidOperationException ex)
             {

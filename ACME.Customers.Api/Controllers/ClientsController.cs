@@ -154,7 +154,7 @@ namespace ACME.Customers.Api.Controllers
                 if (!deleted)
                     return NotFound(new { message = "Cliente no encontrado." });
 
-                return Ok(new { message = "Cliente eliminado correctamente." });
+                return NoContent();
             }
             catch (InvalidOperationException ex)
             {
