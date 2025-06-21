@@ -34,5 +34,14 @@
         /// Notas o comentarios adicionales de la visita.
         /// </summary>
         public string? Notes { get; set; }
+
+        /// <summary>
+        /// Nombre del comercial responsable.
+        /// </summary>
+        /// <remarks>
+        /// Se rellena a partir de la entidad relacionada al mapear, para mostrar en la UI sin
+        /// necesidad de otra consulta adicional.
+        /// </remarks>
+        public string? SalesRepName { get; set; }
     }
 }

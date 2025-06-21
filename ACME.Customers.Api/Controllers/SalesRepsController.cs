@@ -1,4 +1,6 @@
-﻿using ACME.Customers.Application.DTOs;
+﻿using System.Net;
+using System.Text;
+using ACME.Customers.Application.DTOs;
 using ACME.Customers.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,9 +22,10 @@ namespace ACME.Customers.Api.Controllers
         /// <exception cref="ArgumentNullException">Si <paramref name="service"/> es <c>null</c>.</exception>
         public SalesRepsController(ISalesRepService service)
         {
-            _service = service ?? throw new ArgumentNullException(nameof(service), "El servicio de comerciales no puede ser null.");
+            _service = service ?? throw new ArgumentNullException(nameof(service));
         }
 
+        #region JSON Endpoints
         /// <summary>
         /// Recupera todos los comerciales registrados.
         /// </summary>
@@ -47,9 +50,7 @@ namespace ACME.Customers.Api.Controllers
         public async Task<ActionResult<SalesRepDto>> GetById(Guid id)
         {
             var rep = await _service.GetByIdAsync(id);
-            if (rep == null)
-                return NotFound();
-
+            if (rep == null) return NotFound();
             return Ok(rep);
         }
 
@@ -71,7 +72,6 @@ namespace ACME.Customers.Api.Controllers
             }
             catch (Exception ex)
             {
-                // Devuelve BadRequest con el mensaje de error
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -91,16 +91,19 @@ namespace ACME.Customers.Api.Controllers
             try
             {
                 var updated = await _service.UpdateAsync(id, dto);
-                if (!updated)
-                    return NotFound();
-
+                if (!updated) return NotFound();
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error interno al actualizar comercial." });
+            }
         }
+
 
         /// <summary>
         /// Elimina un comercial por su <paramref name="id"/>.
@@ -112,11 +115,97 @@ namespace ACME.Customers.Api.Controllers
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var deleted = await _service.DeleteAsync(id);
-            if (!deleted)
-                return NotFound();
-
-            return NoContent();
+            try
+            {
+                var deleted = await _service.DeleteAsync(id);
+                if (!deleted) return NotFound();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "Error interno al eliminar comercial." });
+            }
         }
+
+        #endregion
+
+        #region HTML fragments for HTMX
+
+        [HttpGet("html")]
+        public async Task<ContentResult> GetAllHtml()
+        {
+            var reps = await _service.GetAllAsync();
+            var sb = new StringBuilder();
+            sb.AppendLine("<table class='min-w-full border-collapse'>");
+            sb.AppendLine("<thead class='bg-gray-100'><tr>");
+            sb.AppendLine("  <th class='border p-2 text-left'>Nombre</th>");
+            sb.AppendLine("  <th class='border p-2 text-left'>Email</th>");
+            sb.AppendLine("  <th class='border p-2 text-left'>Teléfono</th>");
+            sb.AppendLine("  <th class='border p-2 text-left'>Acciones</th>");
+            sb.AppendLine("</tr></thead>");
+            sb.AppendLine("<tbody>");
+            foreach (var r in reps)
+            {
+                var nameEsc = WebUtility.HtmlEncode(r.Name);
+                var emailEsc = WebUtility.HtmlEncode(r.Email);
+                var phoneEsc = WebUtility.HtmlEncode(r.Phone);
+                sb.AppendLine("<tr>");
+                sb.AppendLine($"  <td class='border p-2'>{nameEsc}</td>");
+                sb.AppendLine($"  <td class='border p-2'>{emailEsc}</td>");
+                sb.AppendLine($"  <td class='border p-2'>{phoneEsc}</td>");
+                sb.AppendLine("  <td class='border p-2 space-x-2'>");
+                // Editar:
+                sb.AppendLine($"    <button class='px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600' " +
+                              $"hx-get='/api/SalesReps/{r.Id}/edit-html' " +
+                              $"hx-target='#main-content' hx-swap='innerHTML'>Editar</button>");
+                // Borrar:
+                sb.AppendLine($"    <button class='px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600' " +
+                              $"hx-delete='/api/SalesReps/{r.Id}' " +
+                              $"hx-confirm='¿Eliminar comercial \"{nameEsc}\"?' " +
+                              $"@htmx:responseError=\"window.Alpine && Alpine.store('app').handleError($event)\" " +
+                              $"@htmx:afterRequest=\"if (event.detail.xhr.status === 204) {{ window.Alpine && Alpine.store('app').showToast('Comercial eliminado correctamente'); Alpine.store('app').showList('reps'); }}\">Borrar</button>");
+                sb.AppendLine("  </td>");
+                sb.AppendLine("</tr>");
+            }
+            sb.AppendLine("</tbody></table>");
+            return Content(sb.ToString(), "text/html");
+        }
+
+        [HttpGet("{id:guid}/edit-html")]
+        public async Task<ContentResult> EditHtml(Guid id)
+        {
+            var rep = await _service.GetByIdAsync(id);
+            if (rep == null)
+            {
+                return Content("<div class='text-red-600'>Comercial no encontrado.</div>", "text/html");
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine("<div class='bg-white p-4 rounded shadow'>");
+            sb.AppendLine($"  <h2 class='text-xl font-semibold mb-2'>Editar Comercial: {WebUtility.HtmlEncode(rep.Name)}</h2>");
+            sb.AppendLine("  <form " +
+                          $"hx-put='/api/SalesReps/{rep.Id}' " +
+                          "hx-ext='json-enc' " +
+                          "hx-target='#main-content' hx-swap='innerHTML' " +
+                          "@htmx:responseError=\"window.Alpine && Alpine.store('app').handleError($event)\" " +
+                          "@htmx:afterRequest=\"if (event.detail.xhr.status === 204) { window.Alpine && Alpine.store('app').showToast('Comercial actualizado correctamente'); Alpine.store('app').showList('reps'); }\" " +
+                          "@submit.prevent " +
+                          "class='space-y-2'>");
+            sb.AppendLine($"    <input name='name' value='{WebUtility.HtmlEncode(rep.Name)}' placeholder='Nombre' class='w-full p-2 border rounded' required />");
+            sb.AppendLine($"    <input name='email' type='email' value='{WebUtility.HtmlEncode(rep.Email)}' placeholder='Email' class='w-full p-2 border rounded' required />");
+            sb.AppendLine($"    <input name='phone' value='{WebUtility.HtmlEncode(rep.Phone)}' placeholder='Teléfono' class='w-full p-2 border rounded' required />");
+            sb.AppendLine("    <div class='space-x-2'>");
+            sb.AppendLine("      <button type='submit' class='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'>Guardar</button>");
+            sb.AppendLine("      <button type='button' class='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500' @click=\"$store.app.showList('reps')\">Cancelar</button>");
+            sb.AppendLine("    </div>");
+            sb.AppendLine("  </form>");
+            sb.AppendLine("</div>");
+            return Content(sb.ToString(), "text/html");
+        }
+
+        #endregion
     }
 }

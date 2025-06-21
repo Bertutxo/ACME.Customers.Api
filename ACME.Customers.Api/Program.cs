@@ -1,44 +1,36 @@
-using System.Diagnostics;
-using ACME.Customers.Application.DependencyInjection;
+﻿using ACME.Customers.Application.DependencyInjection;
 using ACME.Customers.Infrastructure;
 using ACME.Customers.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Mostrar en consola la ConnectionString le�da
-Debug.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection")
-    is string cs ? $"[DBG] ConnStr: {cs}" : "[ERR] No hay DefaultConnection");
+// 1) Registrar servicios
+builder.Services
+    .AddDbContext<CustomersDbContext>(o =>
+        o.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")))
+    .AddInfrastructure()   // IClientRepository, ISalesRepRepository, IUnitOfWork
+    .AddApplication();      // IClientService, ISalesRepService, AutoMapper, FluentValidation
 
-// 1. Configurar servicios
-
-// a) DbContext (SQLite)
-builder.Services.AddDbContext<CustomersDbContext>(opts =>
-    opts.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
-
-// b) Capa de infra y aplicaci�n
-builder.Services.AddInfrastructure();  // IClientRepository, IUnitOfWork, etc.
-builder.Services.AddApplication();     // IClientService, AutoMapper, validadores, etc.
-
-// c) API + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 2. Crear esquema si no existe (no borra datos)
+// 2) Crear la base de datos si no existe (sin borrar datos)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();
-    var path = db.Database.GetDbConnection().DataSource;
-    Console.WriteLine($"[DBG] SQLite DB file: {Path.GetFullPath(path)}");
-
     db.Database.EnsureCreated();
 }
 
-// 3. Middleware pipeline
+// 3) Servir la UI estática desde wwwroot
+//    wwwroot/index.html + assets (Tailwind/HTMX/Alpine/etc.)
+app.UseDefaultFiles();  // URL “/” → wwwroot/index.html
+app.UseStaticFiles();   // wwwroot/**
+
+// 4) Swagger solo en Development
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -46,11 +38,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "ACME.Customers API V1");
-        c.RoutePrefix = string.Empty;
+        c.RoutePrefix = "swagger"; // UI de Swagger en /swagger
     });
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+
 app.MapControllers();
+
+// 5) Fallback SPA: cualquier otra ruta sirve index.html
+app.MapFallbackToFile("index.html");
+
 app.Run();

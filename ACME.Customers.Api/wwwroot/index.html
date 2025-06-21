@@ -1,0 +1,366 @@
+﻿<!DOCTYPE html>
+<html lang="es" x-data="appState()">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ACME Customers UI</title>
+
+    <!-- Parche para silenciar warning Tailwind CDN -->
+    <script>
+        (function () {
+            const origWarn = console.warn;
+            console.warn = function (msg, ...args) {
+                if (typeof msg === 'string' && msg.includes('cdn.tailwindcss.com should not be used in production')) return;
+                origWarn.call(console, msg, ...args);
+            };
+        })();
+    </script>
+    <!-- Tailwind CDN (solo desarrollo) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX + JSON encoder -->
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+
+    <!-- Alpine.js ESM para evitar doble carga -->
+    <script type="module">
+        import Alpine from 'https://unpkg.com/alpinejs@3.x.x/dist/module.esm.js';
+        window.Alpine = Alpine;
+
+        Alpine.store('app', {
+            // Estado general
+            form: null,            // 'client' | 'rep' | null para formulario creación inline
+            listType: null,        // 'clients' | 'reps' => para resaltar nav activo
+            errorMsg: '',
+            toastMsg: '',
+            reps: [],              // lista de comerciales para select en cliente
+            newClient: {},         // datos para crear/editar cliente inline
+            newRep: {},            // datos para crear/editar comercial inline
+            saving: false,         // bandera para deshabilitar botón Guardar durante petición
+
+            // Carga lista de comerciales
+            async loadReps() {
+                try {
+                    const resp = await fetch('/api/SalesReps');
+                    if (!resp.ok) throw new Error(`Error cargando comerciales (${resp.status})`);
+                    this.reps = await resp.json();
+                } catch (e) {
+                    console.error('Error loadReps:', e);
+                    this.errorMsg = 'No se pudo cargar comerciales.';
+                    this.reps = [];
+                }
+            },
+
+            // Mostrar lista de clientes o comerciales vía HTMX
+            showClientsList() {
+                this.errorMsg = '';
+                this.toastMsg = '';
+                this.form = null;
+                this.listType = 'clients';
+                htmx.ajax('GET', '/api/Clients/html', {
+                    target: '#main-content',
+                    swap: 'innerHTML'
+                });
+            },
+            showRepsList() {
+                this.errorMsg = '';
+                this.toastMsg = '';
+                this.form = null;
+                this.listType = 'reps';
+                htmx.ajax('GET', '/api/SalesReps/html', {
+                    target: '#main-content',
+                    swap: 'innerHTML'
+                });
+            },
+
+            // Toggle formulario creación inline
+            async toggleForm(type) {
+                this.errorMsg = '';
+                this.toastMsg = '';
+                if (this.form === type) {
+                    this.form = null;
+                    return;
+                }
+                this.form = type;
+                if (type === 'client') {
+                    // Inicializar datos vacíos para nuevo cliente
+                    this.newClient = {
+                        name: '',
+                        contactEmail: '',
+                        visitDate: '',
+                        salesRepId: '',
+                        notes: ''
+                    };
+                    await this.loadReps();
+                } else if (type === 'rep') {
+                    this.newRep = {
+                        name: '',
+                        email: '',
+                        phone: ''
+                    };
+                }
+            },
+
+            // Manejo de errores HTMX
+            handleError(evt) {
+                this.errorMsg = '';
+                try {
+                    const p = JSON.parse(evt.detail.xhr.responseText);
+                    this.errorMsg = p.message || 'Error inesperado';
+                } catch {
+                    this.errorMsg = 'Error del servidor';
+                }
+            },
+            // Toast temporal
+            showToast(msg) {
+                this.toastMsg = msg;
+                setTimeout(() => this.toastMsg = '', 3000);
+            }
+        });
+
+        Alpine.data('appState', () => Alpine.store('app'));
+        Alpine.start();
+    </script>
+
+    <style>
+        /* Botones comunes */
+        .btn-blue {
+            @apply px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50;
+        }
+
+        .btn-green {
+            @apply px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50;
+        }
+
+        .btn-yellow {
+            @apply px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600;
+        }
+
+        .btn-red {
+            @apply px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600;
+        }
+        /* Nav activo */
+        .nav-active {
+            @apply bg-blue-800;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="bg-white shadow p-4 mb-6 relative">
+        <h1 class="text-2xl font-bold">ACME Customers</h1>
+        <p class="text-gray-600">UI con HTMX + Tailwind + Alpine.js</p>
+        <!-- Toast -->
+        <template x-if="$store.app.toastMsg">
+            <div class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow cursor-pointer"
+                 x-text="$store.app.toastMsg"
+                 x-show="$store.app.toastMsg"
+                 x-transition
+                 @click="$store.app.toastMsg = ''">
+            </div>
+        </template>
+        <!-- Error general -->
+        <div x-show="$store.app.errorMsg"
+             x-text="$store.app.errorMsg"
+             class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-700 px-4 py-1 rounded shadow">
+        </div>
+    </header>
+
+    <!-- NAV -->
+    <nav class="px-4 mb-6 flex flex-wrap gap-2">
+        <button :class="['btn-blue', $store.app.listType==='clients' ? 'nav-active' : '']"
+                @click="$store.app.showClientsList()">
+            Listar Clientes
+        </button>
+
+        <button :class="['btn-blue', $store.app.listType==='reps' ? 'nav-active' : '']"
+                @click="$store.app.showRepsList()">
+            Listar Comerciales
+        </button>
+
+        <button :class="['btn-green', $store.app.form==='client' ? 'opacity-75' : '']"
+                @click="$store.app.toggleForm('client')">
+            Crear Cliente
+        </button>
+
+        <button :class="['btn-green', $store.app.form==='rep' ? 'opacity-75' : '']"
+                @click="$store.app.toggleForm('rep')">
+            Crear Comercial
+        </button>
+    </nav>
+
+    <!-- FORMULARIOS CREACIÓN INLINE -->
+    <section class="px-4 mb-6 space-y-4">
+
+        <!-- Crear Cliente -->
+        <div x-show="$store.app.form==='client'" x-transition class="bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-semibold mb-2">Crear Cliente</h2>
+            <form hx-post="/api/Clients"
+                  hx-ext="json-enc"
+                  hx-target="#main-content"
+                  hx-swap="innerHTML"
+                  @htmx:beforeRequest="$store.app.saving = true"
+                  @htmx:afterRequest="
+                    $store.app.saving = false;
+                    if (event.detail.xhr.status === 201) {
+                      $store.app.form = null;
+                      $store.app.showClientsList();
+                      $store.app.showToast('Cliente creado correctamente');
+                    }
+                  "
+                  @htmx:responseError="
+                    $store.app.saving = false;
+                    $store.app.handleError($event)
+                  "
+                  @submit.prevent
+                  class="space-y-4">
+                <!-- Nombre -->
+                <div>
+                    <label class="block mb-1 font-medium" for="name">Nombre</label>
+                    <input id="name" name="name"
+                           placeholder="Nombre"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newClient.name" />
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block mb-1 font-medium" for="contactEmail">Email</label>
+                    <input id="contactEmail" name="contactEmail"
+                           placeholder="Email"
+                           type="email"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newClient.contactEmail" />
+                </div>
+
+                <!-- Fecha Visita -->
+                <div>
+                    <label class="block mb-1 font-medium" for="visitDate">Fecha Visita</label>
+                    <input id="visitDate" name="visitDate"
+                           type="date"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newClient.visitDate" />
+                </div>
+
+                <!-- Comercial Responsable -->
+                <div>
+                    <label class="block mb-1 font-medium" for="salesRepId">Comercial Responsable</label>
+                    <select id="salesRepId" name="salesRepId"
+                            class="w-full p-2 border rounded"
+                            required
+                            x-model="$store.app.newClient.salesRepId">
+                        <option value="">Selecciona Comercial</option>
+                        <template x-for="r in $store.app.reps" :key="r.id">
+                            <option :value="r.id" x-text="r.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Notas -->
+                <div>
+                    <label class="block mb-1 font-medium" for="notes">Notas</label>
+                    <textarea id="notes" name="notes"
+                              placeholder="Notas"
+                              class="w-full p-2 border rounded"
+                              x-model="$store.app.newClient.notes"></textarea>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex justify-end space-x-2">
+                    <!-- Cancelar -->
+                    <button type="button"
+                            class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                            @click="$store.app.form = null">
+                        Cancelar
+                    </button>
+                    <!-- Guardar -->
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                            x-bind:disabled="$store.app.saving">
+                        <!-- Mostrar “Enviando...” o “Guardar” -->
+                        <span x-text="$store.app.saving ? 'Enviando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Crear Comercial -->
+        <div x-show="$store.app.form==='rep'" x-transition class="bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-semibold mb-2">Crear Comercial</h2>
+            <form hx-post="/api/SalesReps"
+                  hx-ext="json-enc"
+                  hx-target="#main-content"
+                  hx-swap="innerHTML"
+                  @htmx:beforeRequest="$store.app.saving = true"
+                  @htmx:afterRequest="
+                    $store.app.saving = false;
+                    if (event.detail.xhr.status === 201) {
+                      $store.app.form = null;
+                      $store.app.showRepsList();
+                      $store.app.showToast('Comercial creado correctamente');
+                    }
+                  "
+                  @htmx:responseError="
+                    $store.app.saving = false;
+                    $store.app.handleError($event)
+                  "
+                  @submit.prevent
+                  class="space-y-4">
+                <!-- Nombre -->
+                <div>
+                    <label class="block mb-1 font-medium" for="repName">Nombre</label>
+                    <input id="repName" name="name"
+                           placeholder="Nombre"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newRep.name" />
+                </div>
+                <!-- Email -->
+                <div>
+                    <label class="block mb-1 font-medium" for="repEmail">Email</label>
+                    <input id="repEmail" name="email"
+                           placeholder="Email"
+                           type="email"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newRep.email" />
+                </div>
+                <!-- Teléfono -->
+                <div>
+                    <label class="block mb-1 font-medium" for="repPhone">Teléfono</label>
+                    <input id="repPhone" name="phone"
+                           placeholder="Teléfono"
+                           class="w-full p-2 border rounded"
+                           required
+                           x-model="$store.app.newRep.phone" />
+                </div>
+                <!-- Botones -->
+                <div class="flex justify-end space-x-2">
+                    <button type="button"
+                            class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                            @click="$store.app.form = null">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                            x-bind:disabled="$store.app.saving">
+                        <span x-text="$store.app.saving ? 'Enviando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </section>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main id="main-content" class="flex-1 p-4 bg-white mx-4 rounded shadow">
+        <p class="text-gray-500">Pulsa “Listar Clientes” o “Listar Comerciales”.</p>
+    </main>
+
+</body>
+</html>

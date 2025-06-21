@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,5 +17,4 @@
     <ProjectReference Include="..\ACME.Customers.Application\ACME.Customers.Application.csproj" />
     <ProjectReference Include="..\ACME.Customers.Infrastructure\ACME.Customers.Infrastructure.csproj" />
   </ItemGroup>
-
 </Project>
