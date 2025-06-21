@@ -71,10 +71,22 @@ namespace ACME.Customers.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ClientCreateDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             try
             {
                 var newId = await _clientService.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = newId }, null);
+
+                // Obtener el DTO recién creado para devolver en la respuesta
+                var createdDto = await _clientService.GetByIdAsync(newId);
+
+                return Ok(new
+                {
+                    message = "Cliente creado satisfactoriamente",
+                    client = createdDto
+                });
             }
             catch (KeyNotFoundException ex)
             {
@@ -98,11 +110,23 @@ namespace ACME.Customers.Api.Controllers
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] ClientUpdateDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
                 var updated = await _clientService.UpdateAsync(id, dto);
-                if (!updated) return NotFound();
-                return NoContent();
+                if (!updated)
+                    return NotFound(new { message = "Cliente no encontrado." });
+
+                var updatedDto = await _clientService.GetByIdAsync(id);
+                return Ok(new
+                {
+                    message = "Cliente actualizado satisfactoriamente",
+                    client = updatedDto
+                });
             }
             catch (KeyNotFoundException ex)
             {
@@ -127,8 +151,10 @@ namespace ACME.Customers.Api.Controllers
             try
             {
                 var deleted = await _clientService.DeleteAsync(id);
-                if (!deleted) return NotFound();
-                return NoContent();
+                if (!deleted)
+                    return NotFound(new { message = "Cliente no encontrado." });
+
+                return Ok(new { message = "Cliente eliminado correctamente." });
             }
             catch (InvalidOperationException ex)
             {

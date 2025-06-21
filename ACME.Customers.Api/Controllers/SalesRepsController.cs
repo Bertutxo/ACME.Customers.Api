@@ -62,19 +62,30 @@ namespace ACME.Customers.Api.Controllers
         /// <see cref="IActionResult"/> con status 201 y cabecera Location a <see cref="GetById"/>,
         /// o 400 si ocurre algún error (p. ej., validación).
         /// </returns>
-        [HttpPost]
         public async Task<IActionResult> Create([FromBody] SalesRepCreateDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             try
             {
                 var newId = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = newId }, null);
+                var resultDto = new SalesRepDto
+                {
+                    Id = newId,
+                    Name = dto.Name,
+                    Email = dto.Email,
+                    Phone = dto.Phone
+                };
+                return Ok(new { message = "Comercial creado satisfactoriamente", salesRep = resultDto });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         /// <summary>
         /// Actualiza un comercial existente.
@@ -88,11 +99,23 @@ namespace ACME.Customers.Api.Controllers
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] SalesRepUpdateDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             try
             {
                 var updated = await _service.UpdateAsync(id, dto);
-                if (!updated) return NotFound();
-                return NoContent();
+                if (!updated)
+                    return NotFound();
+                var resultDto = new SalesRepDto
+                {
+                    Id = id,
+                    Name = dto.Name,
+                    Email = dto.Email,
+                    Phone = dto.Phone
+                };
+                return Ok(new { message = "Comercial actualizado satisfactoriamente", salesRep = resultDto });
             }
             catch (InvalidOperationException ex)
             {
@@ -119,7 +142,7 @@ namespace ACME.Customers.Api.Controllers
             {
                 var deleted = await _service.DeleteAsync(id);
                 if (!deleted) return NotFound();
-                return NoContent();
+                return Ok(new { message = "Comercial eliminado correctamente." });
             }
             catch (InvalidOperationException ex)
             {
