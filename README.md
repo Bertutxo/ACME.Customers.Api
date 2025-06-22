@@ -1,49 +1,38 @@
-ACME.Customers.Api
+# ACME.Customers.Api
 
-API REST para gestionar Clientes y Comerciales de ACME.
+API REST para gestionar Clientes y Comerciales de ACME, con UI ligera basada en HTMX + Alpine.js + Tailwind.
 
-✔️ Propósito
+## ✔️ Propósito
 
-Arquitectura en capas (Core, Infrastructure, Application, Api)
+- Arquitectura en capas: Core, Infrastructure, Application, Api.
+- Patrón Repository + Unit of Work.
+- DTOs y AutoMapper.
+- Validaciones con FluentValidation.
+- Base de datos SQLite local con seed.
+- UI ligera con HTMX + Alpine.js + Tailwind (opcional) para integrarse sin front pesado.
 
-Patrones Repository + Unit of Work
+## 📂 Estructura de proyectos
 
-DTOs y AutoMapper
+- **ACME.Customers.Core**  
+- **ACME.Customers.Infrastructure**  
+- **ACME.Customers.Application**  
+- **ACME.Customers.Api**  
+  - `Program.cs` / arranque: configura DbContext, servicios, Swagger, Static Files.
+  - `Controllers/`: JSON endpoints y fragmentos HTML para HTMX.
+  - `wwwroot/`: aquí va la UI estática (index.html, assets, etc.).
+  - `appsettings.json`: cadena de conexión SQLite.
 
-Validaciones con FluentValidation
+## 🚀 Requisitos
 
-Base de datos SQLite local con seed
+- .NET 8.0 SDK (o 6/7 según tu entorno).
+- Visual Studio 2022/2023 o VS Code.
+- (Opcional) Node.js si deseas compilar CSS con Tailwind CLI para producción.
 
-📂 Estructura de proyectos
+## 🛠️ Cómo ejecutar
 
-ACME.Customers.Core: Entidades de dominio e interfaces de repositorios/UoW
-
-ACME.Customers.Infrastructure: EF Core DbContext, repositorios e implementación de UnitOfWork
-
-ACME.Customers.Application: Servicios de aplicación, caso de uso, DTOs, mapeos y validaciones
-
-ACME.Customers.Api: ASP.NET Core Web API, controladores, Swagger/OpenAPI y arranque
-
-🚀 Requisitos
-
-.NET 8.0 SDK (o .NET 6/7 según tu versión)
-
-Visual Studio 2022/2023 o VS Code
-
-🛠️ Cómo ejecutar
-
-Clona el repositorio:
-
-git clone https://github.com/<tuUsuario>/ACME.Customers.Api.git
-cd ACME.Customers.Api
-
-Restaura paquetes y compila:
-
-dotnet restore
-dotnet build
-
-Ejecuta la API:
-
-dotnet run --project ACME.Customers.Api/ACME.Customers.Api.csproj
-
-Abre Swagger en tu navegador: https://localhost:5001
+1. **Clonar y compilar API**  
+   ```bash
+   git clone https://github.com/<tuUsuario>/ACME.Customers.Api.git
+   cd ACME.Customers.Api
+   dotnet restore
+   dotnet build
